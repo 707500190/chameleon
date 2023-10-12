@@ -22,7 +22,7 @@ class MySQLUtil:
             self.connection.close()
 
     def execute_query(self, query):
-        cursor = self.connection.cursor()
+        cursor = self.connection.cursor(dictionary=True)
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
