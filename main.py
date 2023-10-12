@@ -10,7 +10,7 @@ import requests
 import gui.module_tk as mt
 from util.mysql_util import MySQLUtil
 
-mysql_dev = MySQLUtil('10.60.22.139', 'pms_rw', 'd1m_pms_dev', 'pms_dev')
+mysql_dev = MySQLUtil('', '', '', '')
 mysql_dev.connect()
 version = 100
 
