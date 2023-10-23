@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import sys
@@ -8,9 +9,13 @@ from tkinter import messagebox
 import requests
 
 import gui.module_tk as mt
+from auto_field_gui import AddColumnUI
 from util.mysql_util import MySQLUtil
-
-mysql_dev = MySQLUtil('', '', '', '')
+# 从文件中读取配置数据
+with open('config.json', 'r') as f:
+    config_dic = json.load(f)
+dev_config = config_dic["env"]["dev"]
+mysql_dev = MySQLUtil(dev_config["ip"], dev_config["username"], dev_config["password"], dev_config["schema"])
 mysql_dev.connect()
 version = 100
 
@@ -55,3 +60,7 @@ pyinstaller --onefile --add-data "image.png;." your_script.py
 if __name__ == '__main__':
     update_application()
     md = mt.ModuleTK()
+    root = tk.Tk()
+    AddColumnUI(root)
+    root.mainloop()
+    mysql_dev.disconnect()

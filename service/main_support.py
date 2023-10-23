@@ -1,14 +1,19 @@
 import json
+import os
 import re
 
 from lxml import etree
 
+import const.constant as ct
 from service.file_util import write_file, read_by_path
 from service.search_util import search_files
 from util.mysql_util import MySQLUtil
 
-# 从文件中读取配置数据
-with open('config.json', 'r') as f:
+# 获取当前脚本所在的目录
+script_dir = os.path.dirname(os.path.abspath(__file__))
+# 构建配置文件的路径
+config_file_path = os.path.join(script_dir, '../config.json')
+with open(config_file_path, 'r') as f:
     config_dic = json.load(f)
 PROJECT_DIR_INNER = config_dic["project_dir"]
 
@@ -19,18 +24,7 @@ def convert_type(field_type) -> tuple:
     :param field_type: 数据库类型
     :return: Java类型
     """
-    type_mapping = {
-        'int': ('Integer', ''),
-        'bigint': ('Long', ''),
-        'float': ('Float', ''),
-        'double': ('Double', ''),
-        'decimal': ('BigDecimal', 'java.math'),
-        'varchar': ('String', ''),
-        'text': ('String', ''),  # java.lang.String 这个包不用导
-        'datetime': ('Date', 'java.util'),
-        'timestamp': ('Timestamp', 'java.sql'),
-        # 其他字段类型的映射定义
-    }
+    type_mapping = ct.type_mapping
     return type_mapping.get(field_type.lower())
 
 
@@ -49,23 +43,27 @@ def deal_pojo_file(path1, column_name, db_type1, field_pojo_name, comment1):
     pattern = r'(private|protected)\s+(Integer)\s+id;'
 
     java_type, package_name = convert_type(db_type1)
-    insert_line = f'\tprotected {java_type} {field_pojo_name};'
+    insert_line = f'\tprotected {java_type} {field_pojo_name};\n'
     # 判断文件中是否已经包含此包  True：包含
     import_flag = java_code.__str__().__contains__(java_type)
     column_flag = java_code.__str__().__contains__("@Column")
 
     for i in range(len(java_code)):
         # 导包
-        if java_code[i].__contains__("import") and not import_flag:
-            import_str = f'import {package_name}.{java_type};'
+        if java_code[i].__contains__("import") and not import_flag and package_name:
+            import_str = f'import {package_name}.{java_type};\n'
             java_code.insert(i + 1, import_str)
+            import_flag = True
         if re.search(pattern, java_code[i]):
             # 添加新的代码行
-            java_code.insert(i + 1, f'\t/**\n\t* {comment1}\n\t*/')
+
+            java_code.insert(i + 1, f'\n\t/**\n \t * {comment1}\n\t */')
             # 非实体类不加此注释
             if column_flag:
-                java_code.insert(i + 2, f'\t@Column(name = "{column_name}")')
-            java_code.insert(i + 3, insert_line)
+                java_code.insert(i + 2, f'\n\t@Column(name = "{column_name}")\n')
+                java_code.insert(i + 3, insert_line)
+            else:
+                java_code.insert(i + 3, insert_line + '\n')
     write_file(path1, java_code)
 
 
@@ -100,28 +98,30 @@ def deal_mapper_file(path1, field_source, field_pojo):
         if insert.get('id') == 'insertSelective':
             # 找到第一个<trim>标签并插入新的<if>标签
             first_trim = insert.find('trim')
-            if len(first_trim):
-                new_if_element = etree.Element('if', test=f"{field_pojo} != null")
-                new_if_element.text = f'\n{field_source},\n'
-                first_trim.append(new_if_element)
+            if first_trim is not None:
+                new_if_element = etree.SubElement(first_trim, 'if', test=f"{field_pojo} != null")
+                new_if_element.text = f'\n\t\t\t\t{field_source},\n\t\t'
+                new_if_element.tail = '\n\t\t'
+            else:
+                print("No first trim tag found")
 
-            # 找到第二个<trim>标签并插入新的<if>标签
+                # 找到第二个<trim>标签并插入新的<if>标签
             second_trim = insert.findall('trim')[1]
-            if len(second_trim):
-                new_if_element = etree.Element('if', test=f"{field_pojo} != null")
-                new_if_element.text = '#{' + field_pojo + '},\n'
-                second_trim.append(new_if_element)
+            if second_trim is not None:
+                new_if_element = etree.SubElement(second_trim, 'if', test=f"{field_pojo} != null")
+                new_if_element.text = '\n\t\t\t#{' + field_pojo + '},\n\t\t'
+                new_if_element.tail = '\n\t\t'
 
         if insert.get('id') == 'updateById':
             # 找到<set>标签并插入新的<if>标签
             set_element = insert.find('set')
-            if len(set_element):
-                new_if_element = etree.Element('if', test=f"{field_pojo} != null")
-                new_if_element.text = f"{field_source}=" + '#{' + field_pojo + '},\n'
-                set_element.append(new_if_element)
+            if set_element is not None:
+                new_if_element = etree.SubElement(set_element, 'if', test=f"{field_pojo} != null")
+                new_if_element.text = f'\n\t\t\t\t{field_source}=' + '#{' + field_pojo + '},\n\t\t\t'
+                new_if_element.tail = '\n\t\t\t'
 
     # 将修改后的元素树写回到文件中
-    tree.write(path1, encoding='utf-8', xml_declaration=True, pretty_print=True)
+    tree.write(path1, encoding='utf-8', xml_declaration=True)
 
 
 def get_class_name_by_tb(s: str):
@@ -143,7 +143,7 @@ def get_pojo_field_by_name(s: str):
     return result
 
 
-if __name__ == '__main__':
+def execute_auto(pre_directory, table_name_source, column_name, env, comment1, default='null', db_type='dev'):
     """
     分为几大步：
     一、入库
@@ -152,36 +152,44 @@ if __name__ == '__main__':
     三、 处理实体类；
     四、处理xml
     """
-    pre_directory = 'D:\workspace'
-    table_name_source = 'po_evaluate'
-    field_name_source = ''
-    env = 'dev'
-    comment1 = ''
-    default = ''
-    db_type = ''
-    concat_ddl = f'alter table {table_name_source} ' \
-                 f'add column {field_name_source} {db_type} default {default} comment {comment1};'
+    # 去除 类型后面的数值
+    db_type = db_type[:db_type.find('(')]
+    print(db_type)
 
+    concat_ddl = f"alter table {table_name_source} " \
+                 f"add column {column_name} {db_type} default {default} comment '{comment1}';"
+    print("DDL - SQL: ", concat_ddl)
     # 读取指定环境的配置
-    mysql_dic = config_dic[env]
+    mysql_dic = config_dic["env"][env]
     util = MySQLUtil(mysql_dic['ip'], mysql_dic["username"], mysql_dic["password"], mysql_dic["schema"])
     util.connect()
-    util.execute_update(concat_ddl)
 
+    try:
+        pass
+        # util.execute_update(concat_ddl)
+
+    except Exception as e2:
+        msg = "请检查sql" + e2.__str__()
+        if e2.__str__().__contains__("Duplicate"):
+            msg = "重复字段：" + column_name + e2.__str__()
+        print(f"-----------------------{msg}---------------------")
+        return msg
     # 获取类名， 获取属性名
     pojo_name = get_class_name_by_tb(table_name_source)
-    field_name = get_pojo_field_by_name(field_name_source)
+    field_name = get_pojo_field_by_name(column_name)
     directory = pre_directory + PROJECT_DIR_INNER
     # 处理 param vo result
     pojo_pattern = get_pojo_pattern(pojo_name)
     file_path_list = search_files(pojo_pattern, directory)
     # 处理 pojo类
     for path in file_path_list:
-        deal_pojo_file(path, field_name_source, db_type, field_name, comment1)
+        deal_pojo_file(path, column_name, db_type, field_name, comment1)
         pass
     # 处理 mapper.xml文件（insert update）
     mapper_pattern = get_mapper_pattern(pojo_name)
     file_path_list = search_files(mapper_pattern, directory)
     for mapper_path in file_path_list:
-        deal_mapper_file(mapper_path, field_name_source, field_name)
+        deal_mapper_file(mapper_path, column_name, field_name)
         pass
+    util.disconnect()
+    return concat_ddl
