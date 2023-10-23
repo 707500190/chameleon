@@ -7,7 +7,10 @@ from service.file_util import write_file, read_by_path
 from service.search_util import search_files
 from util.mysql_util import MySQLUtil
 
-PROJECT_DIR_INNER = '\pms-manage\src\main'
+# 从文件中读取配置数据
+with open('config.json', 'r') as f:
+    config_dic = json.load(f)
+PROJECT_DIR_INNER = config_dic["project_dir"]
 
 
 def convert_type(field_type) -> tuple:
@@ -159,12 +162,8 @@ if __name__ == '__main__':
     concat_ddl = f'alter table {table_name_source} ' \
                  f'add column {field_name_source} {db_type} default {default} comment {comment1};'
 
-    # 从文件中读取配置数据
-    with open('config.json', 'r') as f:
-        env_dic = json.load(f)
-
     # 读取指定环境的配置
-    mysql_dic = env_dic[env]
+    mysql_dic = config_dic[env]
     util = MySQLUtil(mysql_dic['ip'], mysql_dic["username"], mysql_dic["password"], mysql_dic["schema"])
     util.connect()
     util.execute_update(concat_ddl)

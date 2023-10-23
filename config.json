@@ -1,7 +1,8 @@
 {
+  "project_dir": "\\pms-manage\\src\\main",
   "env": {
     "dev": {
-      "ip": "localhost",
+      "ip": "",
       "username": "",
       "password": "",
       "schema": ""
