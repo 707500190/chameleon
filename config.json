@@ -1,0 +1,10 @@
+{
+  "env": {
+    "dev": {
+      "ip": "localhost",
+      "username": "",
+      "password": "",
+      "schema": ""
+    }
+  }
+}
