@@ -1,7 +1,7 @@
 import tkinter as tk
 
 import const.constant as ct
-from service.main_support import execute_auto
+from func.add_field import execute_auto
 
 
 class AddColumnUI:
@@ -81,6 +81,9 @@ class AddColumnUI:
             if db_type.__contains__("timestamp"):
                 default_value = 'now()'
         comment = self.comment1.get()
+        # TODO: 可供选择的 执行部分
+        # TODO: 自动搜索pms项目路径
+        # TODO: 接受的值去除空格
         res = execute_auto(project_dir, table_name, column_name, env, comment, default_value, db_type)
 
         self.output_text.delete("1.0", tk.END)
@@ -93,4 +96,8 @@ po_evaluate
 zhao_he
 这是一个注释
 '''
-
+if __name__ == '__main__':
+    a = list()
+    root = tk.Tk()
+    AddColumnUI(root)
+    root.mainloop()

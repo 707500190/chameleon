@@ -1,4 +1,3 @@
-import json
 import os
 import subprocess
 import sys
@@ -8,16 +7,27 @@ from tkinter import messagebox
 
 import requests
 
-import gui.module_tk as mt
-from auto_field_gui import AddColumnUI
+import gui.general_sql_gui as mt
 from util.mysql_util import MySQLUtil
-# 从文件中读取配置数据
-with open('config.json', 'r') as f:
-    config_dic = json.load(f)
+# # 从文件中读取配置数据
+# with open('config.json', 'r') as f:
+#     config_dic = json.load(f)
+config_dic = {
+  "project_dir": "\\pms-manage\\src\\main",
+  "env": {
+    "dev": {
+      "ip": "10.60.22.139",
+      "username": "pms_rw",
+      "password": "d1m_pms_dev",
+      "schema": "pms_dev"
+    }
+  }
+}
+
 dev_config = config_dic["env"]["dev"]
 mysql_dev = MySQLUtil(dev_config["ip"], dev_config["username"], dev_config["password"], dev_config["schema"])
 mysql_dev.connect()
-version = 100
+version = 101
 
 
 def update_application():
@@ -58,9 +68,6 @@ pyinstaller --onefile --add-data "image.png;." your_script.py
 
 '''
 if __name__ == '__main__':
-    update_application()
+    # update_application()
     md = mt.ModuleTK()
-    root = tk.Tk()
-    AddColumnUI(root)
-    root.mainloop()
-    mysql_dev.disconnect()
+

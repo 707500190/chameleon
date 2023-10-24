@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from const import concat_sql
+from func import concat_sql
 
 
 class ModuleTK:

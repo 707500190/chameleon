@@ -1,20 +1,29 @@
-import json
-import os
 import re
 
 from lxml import etree
 
 import const.constant as ct
-from service.file_util import write_file, read_by_path
-from service.search_util import search_files
+from util.file_util import write_file, read_by_path
+from util.search_util import search_files
 from util.mysql_util import MySQLUtil
 
-# 获取当前脚本所在的目录
-script_dir = os.path.dirname(os.path.abspath(__file__))
-# 构建配置文件的路径
-config_file_path = os.path.join(script_dir, '../config.json')
-with open(config_file_path, 'r') as f:
-    config_dic = json.load(f)
+# # 获取当前脚本所在的目录
+# script_dir = os.path.dirname(os.path.abspath(__file__))
+# # 构建配置文件的路径
+# config_file_path = os.path.join(script_dir, '../config.json')
+# with open(config_file_path, 'r') as f:
+#     config_dic = json.load(f)
+config_dic = {
+  "project_dir": "\\pms-manage\\src\\main",
+  "env": {
+    "dev": {
+      "ip": "10.60.22.139",
+      "username": "pms_rw",
+      "password": "d1m_pms_dev",
+      "schema": "pms_dev"
+    }
+  }
+}
 PROJECT_DIR_INNER = config_dic["project_dir"]
 
 
@@ -165,8 +174,9 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
     util.connect()
 
     try:
+        # TODO:此处新增 查询表是否存在
         pass
-        # util.execute_update(concat_ddl)
+        util.execute_update(concat_ddl)
 
     except Exception as e2:
         msg = "请检查sql" + e2.__str__()
