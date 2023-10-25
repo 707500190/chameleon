@@ -6,7 +6,7 @@ from func.add_field import execute_auto
 
 class AddColumnUI:
     def __init__(self, master):
-        self.master = master
+        self.master = tk.Toplevel(master)
         self.master.title("一键新增字段")
         self.master.geometry("500x450")
 
@@ -89,15 +89,3 @@ class AddColumnUI:
         self.output_text.delete("1.0", tk.END)
         self.output_text.insert(tk.END, res)
 
-
-'''
-D:\workspace
-po_evaluate
-zhao_he
-这是一个注释
-'''
-if __name__ == '__main__':
-    a = list()
-    root = tk.Tk()
-    AddColumnUI(root)
-    root.mainloop()

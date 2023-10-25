@@ -4,13 +4,12 @@ from tkinter import ttk
 from func import concat_sql
 
 
-class ModuleTK:
-    def __init__(self):
-        root = tk.Tk()
+class GeneralSqlUI:
+    def __init__(self, root):
         root.title("pms-权限sql生成")
-
+        new_toplevel = tk.Toplevel(root)
         # 创建顶层容器
-        main_frame = ttk.Frame(root, padding="20")
+        main_frame = ttk.Frame(new_toplevel, padding="20")
         main_frame.pack(expand=True, fill=tk.BOTH)
 
         # 创建上部分输入框
@@ -105,7 +104,7 @@ class ModuleTK:
         self.result_text = tk.Text(result_frame)
         self.result_text.pack(expand=True, fill=tk.BOTH, padx=5, pady=5)
 
-        root.mainloop()
+        new_toplevel.mainloop()
 
     def submit(self):
         current_tab = self.nb.index("current")

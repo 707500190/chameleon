@@ -81,15 +81,12 @@ def update_application():
         messagebox.showinfo('提示', '更新失败！')
 
 
-def generate_authority_sql():
-    md = mt.ModuleTK()
-    print("生成权限 SQL")
+def generate_authority_sql(root):
+    mt.GeneralSqlUI(root)
 
 
-def add_column():
-    root2 = tk.Tk()
+def add_column(root2):
     AddColumnUI(root2)
-    root2.mainloop()
 
 
 '''
@@ -103,10 +100,9 @@ if __name__ == '__main__':
     root.title("工具")
     root.geometry("300x200")
 
-    button1 = tk.Button(root, text="生成权限 SQL", command=generate_authority_sql)
+    button1 = tk.Button(root, text="生成权限 SQL", command=lambda: generate_authority_sql(root))
     button1.pack(pady=20)
 
-    button2 = tk.Button(root, text="一键新增字段", command=add_column)
+    button2 = tk.Button(root, text="一键新增字段", command=lambda: add_column(root))
     button2.pack()
-
     root.mainloop()
