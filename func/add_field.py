@@ -1,11 +1,9 @@
 import re
 
-from lxml import etree
-
 import const.constant as ct
 from util.file_util import write_file, read_by_path
-from util.search_util import search_files
 from util.mysql_util import MySQLUtil
+from util.search_util import search_files
 
 # # 获取当前脚本所在的目录
 # script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -14,15 +12,15 @@ from util.mysql_util import MySQLUtil
 # with open(config_file_path, 'r') as f:
 #     config_dic = json.load(f)
 config_dic = {
-  "project_dir": "\\pms-manage\\src\\main",
-  "env": {
-    "dev": {
-      "ip": "10.60.22.139",
-      "username": "pms_rw",
-      "password": "d1m_pms_dev",
-      "schema": "pms_dev"
+    "project_dir": "\\pms-manage\\src\\main",
+    "env": {
+        "dev": {
+            "ip": "10.60.22.139",
+            "username": "pms_rw",
+            "password": "d1m_pms_dev",
+            "schema": "pms_dev"
+        }
     }
-  }
 }
 PROJECT_DIR_INNER = config_dic["project_dir"]
 
@@ -49,7 +47,7 @@ def deal_pojo_file(path1, column_name, db_type1, field_pojo_name, comment1):
     """
     java_code = read_by_path(path1)
     # 定义正则表达式匹配规则
-    pattern = r'(private|protected)\s+(Integer)\s+id;'
+    pattern = r'(private|protected)\s+(Integer|Long|int|long)\s+id;'
 
     java_type, package_name = convert_type(db_type1)
     insert_line = f'\tprotected {java_type} {field_pojo_name};\n'
@@ -117,7 +115,7 @@ def insert_create_by_update(content, column_name, pojo_field):
         set_index = content.find('</set>', index)
         if set_index != -1:
             # 插入 <if> 标签
-            insert_text = f'\t<if test="{pojo_field}!= null">\n\t\t\t\t\t{column_name}=#' + '{' + pojo_field + '},\n\t\t\t\t</if>\n\t\t\t'
+            insert_text = f'\t<if test="{pojo_field}!= null">\n\t\t\t\t{column_name}=#' + '{' + pojo_field + '},\n\t\t\t</if>\n\t\t'
             content = content[:set_index] + insert_text + content[set_index:]
 
     return content
@@ -208,7 +206,27 @@ def get_pojo_field_by_name(s: str):
     return result
 
 
-def execute_auto(pre_directory, table_name_source, column_name, env, comment1, default='null', db_type='dev'):
+# 调用函数进行检查
+def check_column_exists(table_name, column_name, util):
+    try:
+        # 执行查询语句
+        query = f"SHOW COLUMNS FROM {table_name} LIKE '{column_name}'"
+        result = util.execute_query(query)
+
+        # 检查结果是否为空
+        if len(result) == 0:
+            print(f"Column '{column_name}' does not exist in table '{table_name}'")
+            return False
+        else:
+            print(f"Column '{column_name}' exists in table '{table_name}'")
+            return True
+    except Exception as e1:
+        print(e1)
+        return True
+
+
+def execute_auto(pre_directory, table_name_source, column_name, env, comment1, default='null', db_type='dev',
+                 task_list=None):
     """
     分为几大步：
     一、入库
@@ -218,6 +236,8 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
     四、处理xml
     """
     # 去除 类型后面的数值
+    if task_list is None:
+        task_list = ['POJO', 'XML', 'DB']
     db_type = db_type[:db_type.find('(')]
     print(db_type)
 
@@ -228,45 +248,48 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
     mysql_dic = config_dic["env"][env]
     util = MySQLUtil(mysql_dic['ip'], mysql_dic["username"], mysql_dic["password"], mysql_dic["schema"])
     util.connect()
+    # 检查重复字段；
+    exists = check_column_exists(table_name_source, column_name, util)
+    if exists:
+        return '字段已存在或表不存在！'
 
-    try:
-        # TODO:此处新增 查询表是否存在
-        pass
-        util.execute_update(concat_ddl)
-
-    except Exception as e2:
-        msg = "请检查sql" + e2.__str__()
-        if e2.__str__().__contains__("Duplicate"):
-            msg = "重复字段：" + column_name + e2.__str__()
-        print(f"-----------------------{msg}---------------------")
-        return msg
+    if 'DB' in task_list:
+        try:
+            pass
+            util.execute_update(concat_ddl)
+        except Exception as e2:
+            msg = "请检查sql" + e2.__str__()
+            print(f"-----------------------{msg}---------------------")
+            return msg
     # 获取类名， 获取属性名
     pojo_name = get_class_name_by_tb(table_name_source)
     field_name = get_pojo_field_by_name(column_name)
     directory = pre_directory + PROJECT_DIR_INNER
     # 处理 param vo result
-    try:
-        pojo_pattern = get_pojo_pattern(pojo_name)
-        file_path_list = search_files(pojo_pattern, directory)
-        # 处理 pojo类
-        for path in file_path_list:
-            deal_pojo_file(path, column_name, db_type, field_name, comment1)
-            pass
-    except Exception as e2:
-        msg = "处理POJO类（param vo result...）异常：" + e2.__str__()
-        print(f"-----------------------{msg}---------------------")
-        return msg
+    if 'POJO' in task_list:
+        try:
+            pojo_pattern = get_pojo_pattern(pojo_name)
+            file_path_list = search_files(pojo_pattern, directory)
+            # 处理 pojo类
+            for path in file_path_list:
+                deal_pojo_file(path, column_name, db_type, field_name, comment1)
+                pass
+        except Exception as e2:
+            msg = "处理POJO类（param vo result...）异常：" + e2.__str__()
+            print(f"-----------------------{msg}---------------------")
+            return msg
     # 处理 mapper.xml文件（insert update）
-    try:
-        mapper_pattern = get_mapper_pattern(pojo_name)
-        file_path_list = search_files(mapper_pattern, directory)
-        for mapper_path in file_path_list:
-            deal_mapper_file(mapper_path, column_name, field_name)
-            pass
-    except Exception as e2:
-        msg = "处理 mapper.xml文件（insert update）异常：" + e2.__str__()
-        print(f"-----------------------{msg}---------------------")
-        return msg
+    if 'XML' in task_list:
+        try:
+            mapper_pattern = get_mapper_pattern(pojo_name)
+            file_path_list = search_files(mapper_pattern, directory)
+            for mapper_path in file_path_list:
+                deal_mapper_file(mapper_path, column_name, field_name)
+                pass
+        except Exception as e2:
+            msg = "处理 mapper.xml文件（insert update）异常：" + e2.__str__()
+            print(f"-----------------------{msg}---------------------")
+            return msg
     util.disconnect()
     return concat_ddl
 
