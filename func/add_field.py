@@ -90,47 +90,103 @@ def get_mapper_pattern(prefix: str):
     return pattern
 
 
-def deal_mapper_file(path1, field_source, field_pojo):
+def insert_create_by(content, column_name, pojo_field):
+    # 查找 <insert id="insertSelective" 的位置
+    index = content.find('<insert id="insertSelective"')
+    if index != -1:
+        # 在 <insert id="insertSelective" 后查找第一个 </trim> 的位置
+        trim_index = content.find('</trim>', index)
+        if trim_index != -1:
+            # 插入 <if> 标签
+            insert_text = f'\t<if test="{pojo_field}!= null">\n\t\t\t\t{column_name},\n\t\t\t</if>\n\t\t'
+            content = content[:trim_index] + insert_text + content[trim_index:]
+            trim2_index = content.find('</trim>', trim_index)
+            trim2_index = content.find('</trim>', trim2_index + 1)
+            if trim2_index != -1:
+                # 插入 <if> 标签
+                insert_text = f'\t<if test="{pojo_field}!= null">\n' + '\t\t\t\t#{' + pojo_field + '},\n\t\t\t</if>\n\t\t'
+                content = content[:trim2_index] + insert_text + content[trim2_index:]
+    return content
+
+
+def insert_create_by_update(content, column_name, pojo_field):
+    # 查找 <update id="updateById" 的位置
+    index = content.find('<update id="updateById"')
+    if index != -1:
+        # 在 <update id="updateById" 后查找第一个 </set> 的位置
+        set_index = content.find('</set>', index)
+        if set_index != -1:
+            # 插入 <if> 标签
+            insert_text = f'\t<if test="{pojo_field}!= null">\n\t\t\t\t\t{column_name}=#' + '{' + pojo_field + '},\n\t\t\t\t</if>\n\t\t\t'
+            content = content[:set_index] + insert_text + content[set_index:]
+
+    return content
+
+
+def deal_mapper_file(path1, column_name, field_pojo):
     """
     处理 Mapper.xml 在指定地方插入代码 insert | update
+    :param column_name: 数据库字段 age_first
     :param path1: Mapper.xml文件所在路径；
-    :param field_source: 数据库字段 age_first
     :param field_pojo: ageFirst
     """
     # 解析XML文件
-    parser = etree.XMLParser(resolve_entities=False)
-    tree = etree.parse(path1, parser=parser)
-    root = tree.getroot()
+    # 打开文件并读取内容
+    with open(path1, 'r', encoding='utf-8') as f:
+        file_content = f.read()
 
-    # 遍历所有的insert语句 xpath
-    for insert in root.xpath('.//*[starts-with(name(), "insert")] | .//*[starts-with(name(), "update")]'):
-        if insert.get('id') == 'insertSelective':
-            # 找到第一个<trim>标签并插入新的<if>标签
-            first_trim = insert.find('trim')
-            if first_trim is not None:
-                new_if_element = etree.SubElement(first_trim, 'if', test=f"{field_pojo} != null")
-                new_if_element.text = f'\n\t\t\t\t{field_source},\n\t\t'
-                new_if_element.tail = '\n\t\t'
-            else:
-                print("No first trim tag found")
+    # 插入 <if> 标签
+    file_content = insert_create_by(file_content, column_name, field_pojo)
+    file_content = insert_create_by_update(file_content, column_name, field_pojo)
 
-                # 找到第二个<trim>标签并插入新的<if>标签
-            second_trim = insert.findall('trim')[1]
-            if second_trim is not None:
-                new_if_element = etree.SubElement(second_trim, 'if', test=f"{field_pojo} != null")
-                new_if_element.text = '\n\t\t\t#{' + field_pojo + '},\n\t\t'
-                new_if_element.tail = '\n\t\t'
+    # 将结果写回到原文件
+    with open(path1, 'w', encoding='utf-8') as f:
+        f.write(file_content)
 
-        if insert.get('id') == 'updateById':
-            # 找到<set>标签并插入新的<if>标签
-            set_element = insert.find('set')
-            if set_element is not None:
-                new_if_element = etree.SubElement(set_element, 'if', test=f"{field_pojo} != null")
-                new_if_element.text = f'\n\t\t\t\t{field_source}=' + '#{' + field_pojo + '},\n\t\t\t'
-                new_if_element.tail = '\n\t\t\t'
 
-    # 将修改后的元素树写回到文件中
-    tree.write(path1, encoding='utf-8', xml_declaration=True)
+#
+#
+# def deal_mapper_file(path1, field_source, field_pojo):
+#     """
+#     处理 Mapper.xml 在指定地方插入代码 insert | update
+#     :param path1: Mapper.xml文件所在路径；
+#     :param field_source: 数据库字段 age_first
+#     :param field_pojo: ageFirst
+#     """
+#     # 解析XML文件
+#     parser = etree.XMLParser(resolve_entities=False)
+#     tree = etree.parse(path1, parser=parser)
+#     root = tree.getroot()
+#
+#     # 遍历所有的insert语句 xpath
+#     for insert in root.xpath('.//*[starts-with(name(), "insert")] | .//*[starts-with(name(), "update")]'):
+#         if insert.get('id') == 'insertSelective':
+#             # 找到第一个<trim>标签并插入新的<if>标签
+#             first_trim = insert.find('trim')
+#             if first_trim is not None:
+#                 new_if_element = etree.SubElement(first_trim, 'if', test=f"{field_pojo} != null")
+#                 new_if_element.text = f'\n\t\t\t\t{field_source},\n\t\t'
+#                 new_if_element.tail = '\n\t\t'
+#             else:
+#                 print("No first trim tag found")
+#
+#                 # 找到第二个<trim>标签并插入新的<if>标签
+#             second_trim = insert.findall('trim')[1]
+#             if second_trim is not None:
+#                 new_if_element = etree.SubElement(second_trim, 'if', test=f"{field_pojo} != null")
+#                 new_if_element.text = '\n\t\t\t#{' + field_pojo + '},\n\t\t'
+#                 new_if_element.tail = '\n\t\t'
+#
+#         if insert.get('id') == 'updateById':
+#             # 找到<set>标签并插入新的<if>标签
+#             set_element = insert.find('set')
+#             if set_element is not None:
+#                 new_if_element = etree.SubElement(set_element, 'if', test=f"{field_pojo} != null")
+#                 new_if_element.text = f'\n\t\t\t\t{field_source}=' + '#{' + field_pojo + '},\n\t\t\t'
+#                 new_if_element.tail = '\n\t\t\t'
+#
+#     # 将修改后的元素树写回到文件中
+#     tree.write(path1, encoding='utf-8', xml_declaration=True)
 
 
 def get_class_name_by_tb(s: str):
@@ -189,17 +245,31 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
     field_name = get_pojo_field_by_name(column_name)
     directory = pre_directory + PROJECT_DIR_INNER
     # 处理 param vo result
-    pojo_pattern = get_pojo_pattern(pojo_name)
-    file_path_list = search_files(pojo_pattern, directory)
-    # 处理 pojo类
-    for path in file_path_list:
-        deal_pojo_file(path, column_name, db_type, field_name, comment1)
-        pass
+    try:
+        pojo_pattern = get_pojo_pattern(pojo_name)
+        file_path_list = search_files(pojo_pattern, directory)
+        # 处理 pojo类
+        for path in file_path_list:
+            deal_pojo_file(path, column_name, db_type, field_name, comment1)
+            pass
+    except Exception as e2:
+        msg = "处理POJO类（param vo result...）异常：" + e2.__str__()
+        print(f"-----------------------{msg}---------------------")
+        return msg
     # 处理 mapper.xml文件（insert update）
-    mapper_pattern = get_mapper_pattern(pojo_name)
-    file_path_list = search_files(mapper_pattern, directory)
-    for mapper_path in file_path_list:
-        deal_mapper_file(mapper_path, column_name, field_name)
-        pass
+    try:
+        mapper_pattern = get_mapper_pattern(pojo_name)
+        file_path_list = search_files(mapper_pattern, directory)
+        for mapper_path in file_path_list:
+            deal_mapper_file(mapper_path, column_name, field_name)
+            pass
+    except Exception as e2:
+        msg = "处理 mapper.xml文件（insert update）异常：" + e2.__str__()
+        print(f"-----------------------{msg}---------------------")
+        return msg
     util.disconnect()
     return concat_ddl
+
+
+if __name__ == '__main__':
+    deal_mapper_file('D:/workspace/pms-manage/src/main/resources/mapper/PoEvaluateMapper.xml', 'zhao_he', 'zhaoHe')
