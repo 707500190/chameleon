@@ -93,7 +93,7 @@ def add_column():
 
 
 '''
-pyinstaller --onefile --window --icon="img/1.ico main.py
+pyinstaller --onefile --window --icon=img/1.ico main.py
 
 '''
 if __name__ == '__main__':
