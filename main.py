@@ -4,7 +4,6 @@ import sys
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
-
 import requests
 
 import gui.general_sql_gui as mt

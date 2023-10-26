@@ -251,6 +251,7 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
     # 检查重复字段；
     exists = check_column_exists(table_name_source, column_name, util)
     if exists:
+        util.disconnect()
         return '字段已存在或表不存在！'
 
     if 'DB' in task_list:
@@ -260,6 +261,7 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
         except Exception as e2:
             msg = "请检查sql" + e2.__str__()
             print(f"-----------------------{msg}---------------------")
+            util.disconnect()
             return msg
     # 获取类名， 获取属性名
     pojo_name = get_class_name_by_tb(table_name_source)
@@ -277,6 +279,7 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
         except Exception as e2:
             msg = "处理POJO类（param vo result...）异常：" + e2.__str__()
             print(f"-----------------------{msg}---------------------")
+            util.disconnect()
             return msg
     # 处理 mapper.xml文件（insert update）
     if 'XML' in task_list:
@@ -289,10 +292,11 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
         except Exception as e2:
             msg = "处理 mapper.xml文件（insert update）异常：" + e2.__str__()
             print(f"-----------------------{msg}---------------------")
+            util.disconnect()
             return msg
     util.disconnect()
     return concat_ddl
 
 
 if __name__ == '__main__':
-    deal_mapper_file('D:/workspace/pms-manage/src/main/resources/mapper/PoEvaluateMapper.xml', 'zhao_he', 'zhaoHe')
+    deal_mapper_file('D:/workspace/pms-manage/src/main/resources/mapper/PoEvaluateMapper.xml', 'column', 'field')
