@@ -4,6 +4,7 @@ import sys
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
+
 import requests
 
 import gui.general_sql_gui as mt
@@ -77,6 +78,8 @@ def update_application():
                 else:
                     messagebox.showinfo('提示', '更新失败！')
     except Exception as e:
+        mysql_dev.disconnect()
+        print("更新失败！", e)
         messagebox.showinfo('提示', '更新失败！')
 
 
