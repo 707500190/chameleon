@@ -251,8 +251,8 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
     db_type = db_type_full[:db_type_full.find('(')]
     print(db_type)
     # sql concat
-    concat_ddl = f"alter table {table_name_source} " \
-                 f"add column {column_name} {db_type_full} default {default} comment '{comment1}';"
+    concat_ddl = f"alter table `{table_name_source}` " \
+                 f"add column `{column_name}` {db_type_full} default {default} comment '{comment1}';"
     print("DDL - SQL: ", concat_ddl)
     # 转换大小写，驼峰命名，拼接路径
     pojo_name = get_class_name_by_tb(table_name_source)
@@ -268,7 +268,7 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
             msg = "请检查sql" + e2.__str__()
             print(f"-----------------------{msg}---------------------")
             util.disconnect()
-            return msg
+            return msg + f'\n sql语句：{concat_ddl}'
 
     # 处理 param vo result
     if 'POJO' in task_list:
