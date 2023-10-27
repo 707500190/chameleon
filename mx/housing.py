@@ -5,6 +5,7 @@ import tarfile
 import numpy as np
 import pandas as pd
 from six.moves import urllib
+from sklearn.model_selection import StratifiedShuffleSplit
 
 DOWNLOAD_ROOT = "https://raw.githubusercontent.com/ageron/handson-ml/master/"
 
@@ -52,16 +53,34 @@ def split_train_test_by_id(data, test_ratio, id_column, hash=hashlib.md5):
     return data.loc[~in_test_set], data.loc[in_test_set]
 
 
-
 if __name__ == '__main__':
     housing = load_housing_data()
     # 设置随机数种子为42
-    np.random.seed(42)
-    split_train_test(housing, 0.2)
+    # np.random.seed(42)
+    # split_train_test(housing, 0.2)
     # 设置主键，可以使用函数自带，也可使用不变的属性组合
     housing_with_id = housing.reset_index()  # add index column
-    train_set, test_set = split_train_test_by_id(housing_with_id, 0.2, "index")
+    # train_set, test_set = split_train_test_by_id(housing_with_id, 0.2, "index")
+    from sklearn.model_selection import train_test_split
 
-    # from sklearn.model_selection import train_test_split
+    # 训练集和测试集
+    train_set, test_set = train_test_split(housing_with_id, test_size=0.2, random_state=42)
+    # housing["income_cat"] = np.ceil(housing["median_income"] / 1.5)
     #
-    # train_set, test_set = train_test_split(housing_with_id, 0.2, random_state=42)
+    # housing["income_cat"].where(housing["income_cat"] < 5, 5.0, inplace=True)
+    # split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    # # strat_train_set, strat_test_set = pd.DataFrame()
+    # for train_index, test_index in split.split(housing, housing["income_cat"]):
+    #     strat_train_set = housing.loc[train_index]
+    #     strat_test_set = housing.loc[test_index]
+    #
+    # # 一维数组每一列的值（每个平均收入种类对应的 数量）/ 总数  得到每个收入种类的占比，只做观察不用在意这一块代码
+    # print(housing["income_cat"].value_counts() / len(housing))
+    # print(type(housing["income_cat"].value_counts()))
+    #
+    # for set in (strat_train_set, strat_test_set):
+    #     # 查看完成之后删除这一列
+    #     set.drop(["income_cat"], axis=1, inplace=True)
+    ################################################################################################
+    housing = train_set.copy()
+    housing.plot(kind="scatter", x="longitude", y="latitude")
