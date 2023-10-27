@@ -1,0 +1,11 @@
+{
+  "project_dir": "\\pms-manage\\src\\main",
+  "env": {
+    "dev": {
+      "ip": "10.60.22.139",
+      "username": "pms_rw",
+      "password": "d1m_pms_dev",
+      "schema": "pms_dev"
+    }
+  }
+}

@@ -225,26 +225,16 @@ def check_column_exists(table_name, column_name, util):
         return True
 
 
-def execute_auto(pre_directory, table_name_source, column_name, env, comment1, default='null', db_type='dev',
+def execute_auto(pre_directory, table_name_source, column_name, env, comment1, default='null', db_type_full='dev',
                  task_list=None):
     """
-    分为几大步：
-    一、入库
-    二、找文件(一批) ->dest_path[]
-            1.批量的数组 [] 值为匹配到的 文件路径：根据不同的通配表达式，进入不同的数组，此处可以一分为二： pojo = [](vo,param,result)  mapper = [](.java .xml)；
-    三、 处理实体类；
-    四、处理xml
+    1、mysql获取连接；
+    2、校验：字段是否存在，表名是否不存在；
+    3、处理参数，拼接 DDL SQL，拼接绝对路，字段驼峰和类命名转换；
+    2、根据任务项处理文件，1.正则多线程找文件 pojo = [](vo,param,result)  mapper = [](.java .xml)；2.流读入处理
     """
-    # 去除 类型后面的数值
-    if task_list is None:
-        task_list = ['POJO', 'XML', 'DB']
-    db_type = db_type[:db_type.find('(')]
-    print(db_type)
 
-    concat_ddl = f"alter table {table_name_source} " \
-                 f"add column {column_name} {db_type} default {default} comment '{comment1}';"
-    print("DDL - SQL: ", concat_ddl)
-    # 读取指定环境的配置
+    # 获取连接读取指定环境的配置
     mysql_dic = config_dic["env"][env]
     util = MySQLUtil(mysql_dic['ip'], mysql_dic["username"], mysql_dic["password"], mysql_dic["schema"])
     util.connect()
@@ -254,6 +244,22 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
         util.disconnect()
         return '字段已存在或表不存在！'
 
+    # 参数预处理
+    if task_list is None:
+        task_list = ['POJO', 'XML', 'DB']
+    # 字段类型和长度分离： db_type_full varchar(1000) db_type: varchar
+    db_type = db_type_full[:db_type_full.find('(')]
+    print(db_type)
+    # sql concat
+    concat_ddl = f"alter table {table_name_source} " \
+                 f"add column {column_name} {db_type_full} default {default} comment '{comment1}';"
+    print("DDL - SQL: ", concat_ddl)
+    # 转换大小写，驼峰命名，拼接路径
+    pojo_name = get_class_name_by_tb(table_name_source)
+    field_name = get_pojo_field_by_name(column_name)
+    directory = pre_directory + PROJECT_DIR_INNER
+
+    # 处理入库
     if 'DB' in task_list:
         try:
             pass
@@ -263,10 +269,7 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
             print(f"-----------------------{msg}---------------------")
             util.disconnect()
             return msg
-    # 获取类名， 获取属性名
-    pojo_name = get_class_name_by_tb(table_name_source)
-    field_name = get_pojo_field_by_name(column_name)
-    directory = pre_directory + PROJECT_DIR_INNER
+
     # 处理 param vo result
     if 'POJO' in task_list:
         try:

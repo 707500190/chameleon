@@ -28,7 +28,7 @@ config_dic = {
 dev_config = config_dic["env"]["dev"]
 mysql_dev = MySQLUtil(dev_config["ip"], dev_config["username"], dev_config["password"], dev_config["schema"])
 mysql_dev.connect()
-version = 102
+version = 103
 
 
 def get_platform_type():
