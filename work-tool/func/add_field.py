@@ -225,7 +225,7 @@ def check_column_exists(table_name, column_name, util):
         return True
 
 
-def execute_auto(pre_directory, table_name_source, column_name, env, comment1, default='null', db_type_full='dev',
+def execute_auto(pre_directory, table_name_source, column_name, env, comment1, default='null', db_type='',
                  task_list=None):
     """
     1、mysql获取连接；
@@ -248,11 +248,10 @@ def execute_auto(pre_directory, table_name_source, column_name, env, comment1, d
     if task_list is None:
         task_list = ['POJO', 'XML', 'DB']
     # 字段类型和长度分离： db_type_full varchar(1000) db_type: varchar
-    db_type = db_type_full[:db_type_full.find('(')]
     print(db_type)
     # sql concat
     concat_ddl = f"alter table `{table_name_source}` " \
-                 f"add column `{column_name}` {db_type_full} default {default} comment '{comment1}';"
+                 f"add column `{column_name}` {db_type} default {default} comment '{comment1}';"
     print("DDL - SQL: ", concat_ddl)
     # 转换大小写，驼峰命名，拼接路径
     pojo_name = get_class_name_by_tb(table_name_source)

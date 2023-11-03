@@ -80,7 +80,10 @@ class AddColumnUI:
         table_name = self.table_name_source.get()
         column_name = self.column_name.get()
         env = self.env.get()
-        db_type = f"{self.db_type.get()}({self.length.get()})"
+        if len(self.length.get()) == 0:
+            db_type = self.db_type.get()
+        else:
+            db_type = f"{self.db_type.get()}({self.length.get()})"
         default_value = self.default.get()
         if default_value.__contains__('null') or default_value.__contains__('NULL') and db_type.__contains__(
                 "timestamp"):
